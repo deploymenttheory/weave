@@ -10,27 +10,25 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/ebitengine/purego/objc"
-
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc/objcerrors"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego/objcerrors"
 )
 
 var (
-	SelObjectForKey  = objc.RegisterName("objectForKey:")
-	SelCount         = objc.RegisterName("count")
-	SelObjectAtIndex = objc.RegisterName("objectAtIndex:")
-	SelAddObject     = objc.RegisterName("addObject:")
-	SelArray         = objc.RegisterName("array")
+	SelObjectForKey  = purego.RegisterName("objectForKey:")
+	SelCount         = purego.RegisterName("count")
+	SelObjectAtIndex = purego.RegisterName("objectAtIndex:")
+	SelAddObject     = purego.RegisterName("addObject:")
+	SelArray         = purego.RegisterName("array")
 )
 
 // WrapperID recovers the raw ObjC pointer from a generated-binding value
 // whose generic instantiation returned the object address as a Go wrapper
 // pointer (e.g. ResourceValuesForKeysError); such values must never have
 // their methods called directly.
-func WrapperID[T any](p *T) objc.ID {
-	return objc.ID(uintptr(unsafe.Pointer(p)))
+func WrapperID[T any](p *T) purego.ID {
+	return purego.ID(uintptr(unsafe.Pointer(p)))
 }
 
 // NSStr converts a Go string to a Foundation NSString.
@@ -43,21 +41,21 @@ func GoStr(s *foundation.NSString) string {
 	if s == nil {
 		return ""
 	}
-	return pureobjc.GoString(s.Ptr())
+	return purego.GoString(s.Ptr())
 }
 
 // EnvironmentValue mirrors Swift's ProcessInfo.processInfo.environment[name],
 // going through NSProcessInfo rather than os.Getenv.
 func EnvironmentValue(name string) (string, bool) {
 	environment := foundation.NSProcessInfoProcessInfo().Environment()
-	value := objc.Send[objc.ID](environment.Ptr(), SelObjectForKey, pureobjc.NSString(name))
+	value := purego.Send[purego.ID](environment.Ptr(), SelObjectForKey, purego.NSString(name))
 	if value == 0 {
 		return "", false
 	}
-	return pureobjc.GoString(value), true
+	return purego.GoString(value), true
 }
 
-// The generic NSArray accessors instantiate objc.Send with wrapper-pointer
+// The generic NSArray accessors instantiate purego.Send with wrapper-pointer
 // type parameters, which is not ABI-safe through purego, so the helpers below
 // iterate containers with direct sends and rewrap each element via FromID
 // (retaining first, because FromID registers a releasing finalizer).
@@ -67,11 +65,11 @@ func NSArrayURLs(array *foundation.NSArray[*foundation.NSURL]) []*foundation.NSU
 	if array == nil {
 		return nil
 	}
-	count := objc.Send[uint](array.Ptr(), SelCount)
+	count := purego.Send[uint](array.Ptr(), SelCount)
 	urls := make([]*foundation.NSURL, 0, count)
 	for i := range count {
-		id := objc.Send[objc.ID](array.Ptr(), SelObjectAtIndex, i)
-		urls = append(urls, foundation.NSURLFromID(pureobjc.Retain(id)))
+		id := purego.Send[purego.ID](array.Ptr(), SelObjectAtIndex, i)
+		urls = append(urls, foundation.NSURLFromID(purego.Retain(id)))
 	}
 	return urls
 }
@@ -81,11 +79,11 @@ func NSArrayStrings(array *foundation.NSArray[*foundation.NSString]) []string {
 	if array == nil {
 		return nil
 	}
-	count := objc.Send[uint](array.Ptr(), SelCount)
+	count := purego.Send[uint](array.Ptr(), SelCount)
 	strs := make([]string, 0, count)
 	for i := range count {
-		id := objc.Send[objc.ID](array.Ptr(), SelObjectAtIndex, i)
-		strs = append(strs, pureobjc.GoString(id))
+		id := purego.Send[purego.ID](array.Ptr(), SelObjectAtIndex, i)
+		strs = append(strs, purego.GoString(id))
 	}
 	return strs
 }
@@ -95,29 +93,29 @@ func NSArrayStrings(array *foundation.NSArray[*foundation.NSString]) []string {
 // the generated body dereferences it.
 func EmptyNSArray[T any]() *foundation.NSArray[T] {
 	empty := foundation.NSArrayArray()
-	return foundation.NSArrayFromID[T](pureobjc.Retain(empty.Ptr()))
+	return foundation.NSArrayFromID[T](purego.Retain(empty.Ptr()))
 }
 
 // AllocClass sends +alloc to the named class, for use with the generated
 // Init* instance methods.
-func AllocClass(className string) objc.ID {
-	return objc.Send[objc.ID](objc.ID(objc.GetClass(className)), objc.RegisterName("alloc"))
+func AllocClass(className string) purego.ID {
+	return purego.Send[purego.ID](purego.ID(purego.GetClass(className)), purego.RegisterName("alloc"))
 }
 
 // NSArrayFromIDs builds a typed NSArray from raw ObjC object pointers.
-func NSArrayFromIDs[T any](ids ...objc.ID) *foundation.NSArray[T] {
-	array := objc.Send[objc.ID](objc.ID(objc.GetClass("NSMutableArray")), SelArray)
+func NSArrayFromIDs[T any](ids ...purego.ID) *foundation.NSArray[T] {
+	array := purego.Send[purego.ID](purego.ID(purego.GetClass("NSMutableArray")), SelArray)
 	for _, id := range ids {
 		array.Send(SelAddObject, id)
 	}
-	return foundation.NSArrayFromID[T](pureobjc.Retain(array))
+	return foundation.NSArrayFromID[T](purego.Retain(array))
 }
 
 // NSStringArray converts a Go string slice to an NSArray<NSString *>.
 func NSStringArray(items []string) *foundation.NSArray[*foundation.NSString] {
-	ids := make([]objc.ID, 0, len(items))
+	ids := make([]purego.ID, 0, len(items))
 	for _, item := range items {
-		ids = append(ids, pureobjc.NSString(item))
+		ids = append(ids, purego.NSString(item))
 	}
 	return NSArrayFromIDs[*foundation.NSString](ids...)
 }
@@ -147,7 +145,7 @@ func BytesToNSData(b []byte) *foundation.NSData {
 // keyID is the raw ObjC pointer of an NSURLResourceKey — for the generated
 // extern accessors that is WrapperID(foundation.NSURL…Key()), because those
 // return the object address cast to *NSString rather than a real wrapper.
-func URLResourceValue(url *foundation.NSURL, keyID objc.ID) (objc.ID, error) {
+func URLResourceValue(url *foundation.NSURL, keyID purego.ID) (purego.ID, error) {
 	keys := NSArrayFromIDs[*foundation.NSString](keyID)
 	values, err := url.ResourceValuesForKeysError(keys)
 	if err != nil {
@@ -156,7 +154,7 @@ func URLResourceValue(url *foundation.NSURL, keyID objc.ID) (objc.ID, error) {
 	if values == nil {
 		return 0, nil
 	}
-	return objc.Send[objc.ID](WrapperID(values), SelObjectForKey, keyID), nil
+	return purego.Send[purego.ID](WrapperID(values), SelObjectForKey, keyID), nil
 }
 
 // IsURLError reports whether err is an NSURLErrorDomain error — the Go
@@ -233,6 +231,6 @@ func NSURLFromPath(path string) *foundation.NSURL {
 }
 
 var (
-	SelDictionary      = objc.RegisterName("dictionary")
-	SelSetObjectForKey = objc.RegisterName("setObject:forKey:")
+	SelDictionary      = purego.RegisterName("dictionary")
+	SelSetObjectForKey = purego.RegisterName("setObject:forKey:")
 )

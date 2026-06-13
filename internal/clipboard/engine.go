@@ -33,7 +33,7 @@ import (
 	weavessh "github.com/deploymenttheory/weave/internal/ssh"
 	"github.com/deploymenttheory/weave/internal/vmdirectory"
 
-	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/internal/objc"
+	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/cgo"
 )
 
 const (

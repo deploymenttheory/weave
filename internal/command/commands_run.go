@@ -44,15 +44,13 @@ import (
 	"github.com/deploymenttheory/weave/internal/vmstorage"
 	weavevnc "github.com/deploymenttheory/weave/internal/vnc"
 
-	"github.com/ebitengine/purego/objc"
-
 	appkit "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/appkit"
 	corefoundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/corefoundation"
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
 	virtualization "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/virtualization"
-	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/internal/objc"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc/objcerrors"
+	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/cgo"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego/objcerrors"
 )
 
 // vm ports tart's global `var vm: VM?` from Run.swift.
@@ -890,7 +888,7 @@ func (c *RunCommand) runUI() {
 	window.SetTitle(objcutil.NSStr(vm.Name))
 
 	machineView := virtualization.VZVirtualMachineViewFromID(
-		objc.Send[objc.ID](objcutil.AllocClass("VZVirtualMachineView"), objc.RegisterName("init")))
+		purego.Send[purego.ID](objcutil.AllocClass("VZVirtualMachineView"), purego.RegisterName("init")))
 	machineView.SetCapturesSystemKeys(c.CaptureSystemKeys)
 
 	// If not specified, enable automatic display reconfiguration for guests
@@ -905,7 +903,7 @@ func (c *RunCommand) runUI() {
 	machineView.SetVirtualMachine(vm.VirtualMachine)
 
 	window.SetContentView(&machineView.NSView)
-	window.SetDelegate(objc.ID(runWindowDelegateClass()).Send(objc.RegisterName("new")))
+	window.SetDelegate(purego.ID(runWindowDelegateClass()).Send(purego.RegisterName("new")))
 	window.Center()
 	window.MakeKeyAndOrderFront(0)
 
@@ -916,14 +914,14 @@ func (c *RunCommand) runUI() {
 // runWindowDelegateClass registers the window delegate that translates a
 // window close into SIGUSR1 (suspendable) or SIGINT, mirroring MainApp's
 // onDisappear handler.
-var runWindowDelegateClass = sync.OnceValue(func() objc.Class {
-	class, err := objc.RegisterClass("OrinRunWindowDelegate", objc.GetClass("NSObject"),
-		[]*objc.Protocol{objc.GetProtocol("NSWindowDelegate")},
+var runWindowDelegateClass = sync.OnceValue(func() purego.Class {
+	class, err := purego.RegisterClass("OrinRunWindowDelegate", purego.GetClass("NSObject"),
+		[]*purego.Protocol{purego.GetProtocol("NSWindowDelegate")},
 		nil,
-		[]objc.MethodDef{
+		[]purego.MethodDef{
 			{
-				Cmd: objc.RegisterName("windowWillClose:"),
-				Fn: func(_ objc.ID, _ objc.SEL, _ objc.ID) {
+				Cmd: purego.RegisterName("windowWillClose:"),
+				Fn: func(_ purego.ID, _ purego.SEL, _ purego.ID) {
 					signum := syscall.SIGINT
 					if runSuspendableFlag.Load() {
 						signum = syscall.SIGUSR1
@@ -1261,17 +1259,17 @@ func (c *RunCommand) directoryShares() ([]*virtualization.VZDirectorySharingDevi
 		} else if !allNamedShares {
 			return nil, weaveerrors.ErrGeneric("invalid --dir syntax: for multiple directory shares each one of them should be named")
 		} else {
-			directories := objc.Send[objc.ID](objc.ID(objc.GetClass("NSMutableDictionary")), objcutil.SelDictionary)
+			directories := purego.Send[purego.ID](purego.ID(purego.GetClass("NSMutableDictionary")), objcutil.SelDictionary)
 			for _, share := range shares {
 				sharedDirectory, err := share.createConfiguration()
 				if err != nil {
 					return nil, err
 				}
-				directories.Send(objcutil.SelSetObjectForKey, sharedDirectory.Ptr(), pureobjc.NSString(share.name))
+				directories.Send(objcutil.SelSetObjectForKey, sharedDirectory.Ptr(), purego.NSString(share.name))
 			}
 			multipleShare := virtualization.VZMultipleDirectoryShareFromID(
 				objcutil.AllocClass("VZMultipleDirectoryShare")).
-				InitWithDirectories(foundation.NSDictionaryFromID[*foundation.NSString, *virtualization.VZSharedDirectory](pureobjc.Retain(directories)))
+				InitWithDirectories(foundation.NSDictionaryFromID[*foundation.NSString, *virtualization.VZSharedDirectory](purego.Retain(directories)))
 			sharingDevice.SetShare(&multipleShare.VZDirectoryShare)
 		}
 
@@ -1374,7 +1372,7 @@ func (s directoryShare) createConfiguration() (*virtualization.VZSharedDirectory
 		return nil, weaveerrors.ErrGeneric("tar not found in PATH")
 	}
 
-	task := foundation.NSTaskFromID(objc.Send[objc.ID](objc.ID(objc.GetClass("NSTask")), objc.RegisterName("new")))
+	task := foundation.NSTaskFromID(purego.Send[purego.ID](purego.ID(purego.GetClass("NSTask")), purego.RegisterName("new")))
 	task.SetExecutableURL(tarURL)
 	task.SetCurrentDirectoryURL(temporaryLocation)
 	task.SetArguments(objcutil.NSStringArray([]string{"-xzf", cachePath}))

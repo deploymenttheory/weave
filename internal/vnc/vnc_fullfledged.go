@@ -16,18 +16,15 @@ import (
 	"github.com/deploymenttheory/weave/internal/passphrase"
 	weavevm "github.com/deploymenttheory/weave/internal/vm"
 
-	"github.com/ebitengine/purego"
-	"github.com/ebitengine/purego/objc"
-
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
-	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/internal/objc"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/cgo"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 )
 
 // FullFledgedVNC ports tart's FullFledgedVNC class.
 type FullFledgedVNC struct {
 	Password string
-	vnc      objc.ID
+	vnc      purego.ID
 }
 
 var _ VNC = (*FullFledgedVNC)(nil)
@@ -41,19 +38,19 @@ func NewFullFledgedVNC(vm *weavevm.VM, password string) *FullFledgedVNC {
 		password = strings.Join(passphrase.GeneratePassphrase(4), "-")
 	}
 
-	var vnc objc.ID
+	var vnc purego.ID
 	dispatch.RunOnMainThread(func() {
-		securityConfiguration := objc.ID(objc.GetClass("_VZVNCAuthenticationSecurityConfiguration")).
-			Send(objc.RegisterName("alloc")).
-			Send(objc.RegisterName("initWithPassword:"), pureobjc.NSString(password))
+		securityConfiguration := purego.ID(purego.GetClass("_VZVNCAuthenticationSecurityConfiguration")).
+			Send(purego.RegisterName("alloc")).
+			Send(purego.RegisterName("initWithPassword:"), purego.NSString(password))
 
 		globalQueue := dispatchGetGlobalQueue()
-		vnc = objc.ID(objc.GetClass("_VZVNCServer")).
-			Send(objc.RegisterName("alloc")).
-			Send(objc.RegisterName("initWithPort:queue:securityConfiguration:"),
+		vnc = purego.ID(purego.GetClass("_VZVNCServer")).
+			Send(purego.RegisterName("alloc")).
+			Send(purego.RegisterName("initWithPort:queue:securityConfiguration:"),
 				uint16(0), globalQueue, securityConfiguration)
-		vnc.Send(objc.RegisterName("setVirtualMachine:"), vm.VirtualMachine.Ptr())
-		vnc.Send(objc.RegisterName("start"))
+		vnc.Send(purego.RegisterName("setVirtualMachine:"), vm.VirtualMachine.Ptr())
+		vnc.Send(purego.RegisterName("start"))
 	})
 
 	return &FullFledgedVNC{Password: password, vnc: vnc}
@@ -64,7 +61,7 @@ func (v *FullFledgedVNC) WaitForURL(ctx context.Context, netBridged bool) (*foun
 		// Port is 0 shortly after start(), but will be initialized later.
 		var port uint16
 		dispatch.RunOnMainThread(func() {
-			port = objc.Send[uint16](v.vnc, objc.RegisterName("port"))
+			port = purego.Send[uint16](v.vnc, purego.RegisterName("port"))
 		})
 		if port != 0 {
 			return foundation.NSURLURLWithString(objcutil.NSStr(
@@ -82,19 +79,19 @@ func (v *FullFledgedVNC) WaitForURL(ctx context.Context, netBridged bool) (*foun
 
 func (v *FullFledgedVNC) Stop() error {
 	dispatch.RunOnMainThread(func() {
-		v.vnc.Send(objc.RegisterName("stop"))
+		v.vnc.Send(purego.RegisterName("stop"))
 	})
 	return nil
 }
 
 // dispatchGetGlobalQueue returns dispatch_get_global_queue(0, 0), resolved
 // from libdispatch at runtime via purego.
-var dispatchGetGlobalQueue = sync.OnceValue(func() objc.ID {
+var dispatchGetGlobalQueue = sync.OnceValue(func() purego.ID {
 	var getGlobalQueue func(identifier int64, flags uint64) uintptr
 	symbol, err := purego.Dlsym(purego.RTLD_DEFAULT, "dispatch_get_global_queue")
 	if err != nil || symbol == 0 {
 		return 0
 	}
 	purego.RegisterFunc(&getGlobalQueue, symbol)
-	return objc.ID(getGlobalQueue(0, 0))
+	return purego.ID(getGlobalQueue(0, 0))
 })

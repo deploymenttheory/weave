@@ -25,7 +25,7 @@ import (
 	"github.com/deploymenttheory/weave/internal/telemetry"
 	"github.com/deploymenttheory/weave/internal/terminal"
 
-	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/internal/objc"
+	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/cgo"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"

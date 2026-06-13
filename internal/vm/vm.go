@@ -7,7 +7,7 @@
 //   - Generated *CompletionHandler bindings panic under purego, so every
 //     async call builds its block manually (see fetcher.go for the pattern).
 //   - All VZVirtualMachine access is dispatched to the main queue via
-//     internal/objc.RunOnMainThread, matching the @MainActor annotations.
+//     dispatch.RunOnMainThread (bindings/runtime/cgo), matching the @MainActor annotations.
 //go:build darwin
 
 package vm
@@ -45,12 +45,10 @@ import (
 	"github.com/deploymenttheory/weave/internal/prune"
 	"github.com/deploymenttheory/weave/internal/vmdirectory"
 
-	"github.com/ebitengine/purego/objc"
-
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
 	virtualization "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/virtualization"
-	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/internal/objc"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/cgo"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 	idiomatic "github.com/deploymenttheory/go-bindings-macosplatform/opinionated/idiomatic/virtualization"
 )
 
@@ -162,31 +160,31 @@ type VM struct {
 	Config *vmconfig.VMConfig
 
 	network    *weavenetwork.Topology
-	delegateID objc.ID
+	delegateID purego.ID
 }
 
 var _ controlsocket.VirtioSocketConnector = (*VM)(nil)
 
 // vmDelegateRegistry maps delegate instances to their VM.
-var vmDelegateRegistry sync.Map // objc.ID → *VM
+var vmDelegateRegistry sync.Map // purego.ID → *VM
 
 // vmDelegateClass registers the ObjC class implementing
 // VZVirtualMachineDelegate, signalling the VM's semaphore like VM.swift.
-var vmDelegateClass = sync.OnceValue(func() objc.Class {
-	lookup := func(self objc.ID) *VM {
+var vmDelegateClass = sync.OnceValue(func() purego.Class {
+	lookup := func(self purego.ID) *VM {
 		if vm, ok := vmDelegateRegistry.Load(self); ok {
 			return vm.(*VM)
 		}
 		return nil
 	}
 
-	class, err := objc.RegisterClass("OrinVMDelegate", objc.GetClass("NSObject"),
-		[]*objc.Protocol{objc.GetProtocol("VZVirtualMachineDelegate")},
+	class, err := purego.RegisterClass("OrinVMDelegate", purego.GetClass("NSObject"),
+		[]*purego.Protocol{purego.GetProtocol("VZVirtualMachineDelegate")},
 		nil,
-		[]objc.MethodDef{
+		[]purego.MethodDef{
 			{
-				Cmd: objc.RegisterName("guestDidStop:"),
-				Fn: func(self objc.ID, _ objc.SEL, _ objc.ID) {
+				Cmd: purego.RegisterName("guestDidStop:"),
+				Fn: func(self purego.ID, _ purego.SEL, _ purego.ID) {
 					fmt.Println("guest has stopped the virtual machine")
 					if vm := lookup(self); vm != nil {
 						vm.sema.Signal()
@@ -194,19 +192,19 @@ var vmDelegateClass = sync.OnceValue(func() objc.Class {
 				},
 			},
 			{
-				Cmd: objc.RegisterName("virtualMachine:didStopWithError:"),
-				Fn: func(self objc.ID, _ objc.SEL, _ objc.ID, errID objc.ID) {
-					fmt.Printf("guest has stopped the virtual machine due to error: %v\n", pureobjc.NSErrorToError(errID))
+				Cmd: purego.RegisterName("virtualMachine:didStopWithError:"),
+				Fn: func(self purego.ID, _ purego.SEL, _ purego.ID, errID purego.ID) {
+					fmt.Printf("guest has stopped the virtual machine due to error: %v\n", purego.NSErrorToError(errID))
 					if vm := lookup(self); vm != nil {
 						vm.sema.Signal()
 					}
 				},
 			},
 			{
-				Cmd: objc.RegisterName("virtualMachine:networkDevice:attachmentWasDisconnectedWithError:"),
-				Fn: func(self objc.ID, _ objc.SEL, _ objc.ID, deviceID objc.ID, errID objc.ID) {
+				Cmd: purego.RegisterName("virtualMachine:networkDevice:attachmentWasDisconnectedWithError:"),
+				Fn: func(self purego.ID, _ purego.SEL, _ purego.ID, deviceID purego.ID, errID purego.ID) {
 					fmt.Printf("virtual machine's network attachment %v has been disconnected with error: %v\n",
-						deviceID, pureobjc.NSErrorToError(errID))
+						deviceID, purego.NSErrorToError(errID))
 					if vm := lookup(self); vm != nil {
 						vm.sema.Signal()
 					}
@@ -261,10 +259,10 @@ func (vm *VM) attachVirtualMachine() {
 		vm.VirtualMachine = virtualization.VZVirtualMachineFromID(objcutil.AllocClass("VZVirtualMachine")).
 			InitWithConfiguration(vm.Configuration)
 
-		delegateID := objc.ID(vmDelegateClass()).Send(objc.RegisterName("new"))
+		delegateID := purego.ID(vmDelegateClass()).Send(purego.RegisterName("new"))
 		vmDelegateRegistry.Store(delegateID, vm)
 		vm.delegateID = delegateID
-		vm.VirtualMachine.Ptr().Send(objc.RegisterName("setDelegate:"), delegateID)
+		vm.VirtualMachine.Ptr().Send(purego.RegisterName("setDelegate:"), delegateID)
 	})
 }
 
@@ -273,7 +271,7 @@ func (vm *VM) attachVirtualMachine() {
 func VMRetrieveIPSW(ctx context.Context, remoteURL *foundation.NSURL) (*foundation.NSURL, error) {
 	// Check if we already have this IPSW in cache.
 	headRequest := foundation.NSMutableURLRequestFromID(
-		objc.Send[objc.ID](objcutil.AllocClass("NSMutableURLRequest"), objc.RegisterName("initWithURL:"), remoteURL.Ptr()))
+		purego.Send[purego.ID](objcutil.AllocClass("NSMutableURLRequest"), purego.RegisterName("initWithURL:"), remoteURL.Ptr()))
 	headRequest.SetHTTPMethod(objcutil.NSStr("HEAD"))
 	_, headResponse, err := fetcher.FetcherFetch(ctx, &headRequest.NSURLRequest, false)
 	if err != nil {
@@ -483,15 +481,15 @@ func loadMacOSRestoreImage(ctx context.Context, ipswURL *foundation.NSURL) (*vir
 	}
 	resultCh := make(chan result, 1)
 
-	block := objc.NewBlock(func(_ objc.Block, imageID objc.ID, errID objc.ID) {
+	block := purego.NewBlock(func(_ purego.Block, imageID purego.ID, errID purego.ID) {
 		if errID != 0 {
-			resultCh <- result{err: pureobjc.NSErrorToError(errID)}
+			resultCh <- result{err: purego.NSErrorToError(errID)}
 			return
 		}
-		resultCh <- result{image: virtualization.VZMacOSRestoreImageFromID(pureobjc.Retain(imageID))}
+		resultCh <- result{image: virtualization.VZMacOSRestoreImageFromID(purego.Retain(imageID))}
 	})
-	objc.ID(objc.GetClass("VZMacOSRestoreImage")).Send(
-		objc.RegisterName("loadFileURL:completionHandler:"), ipswURL.Ptr(), block)
+	purego.ID(purego.GetClass("VZMacOSRestoreImage")).Send(
+		purego.RegisterName("loadFileURL:completionHandler:"), ipswURL.Ptr(), block)
 
 	select {
 	case r := <-resultCh:
@@ -514,15 +512,15 @@ func (vm *VM) install(ctx context.Context, ipswURL *foundation.NSURL) error {
 	observer.Log(logging.DefaultLogger())
 
 	errCh := make(chan error, 1)
-	block := objc.NewBlock(func(_ objc.Block, errID objc.ID) {
+	block := purego.NewBlock(func(_ purego.Block, errID purego.ID) {
 		if errID != 0 {
-			errCh <- pureobjc.NSErrorToError(errID)
+			errCh <- purego.NSErrorToError(errID)
 		} else {
 			errCh <- nil
 		}
 	})
 	dispatch.RunOnMainThread(func() {
-		installer.Ptr().Send(objc.RegisterName("installWithCompletionHandler:"), block)
+		installer.Ptr().Send(purego.RegisterName("installWithCompletionHandler:"), block)
 	})
 
 	select {
@@ -581,11 +579,11 @@ func (vm *VM) Start(recovery bool, shouldResume bool) error {
 // Connect ports VM.connect(toPort:); it satisfies the controlsocket.VirtioSocketConnector
 // interface used by ControlSocket.
 func (vm *VM) Connect(ctx context.Context, toPort uint32) (*virtualization.VZVirtioSocketConnection, error) {
-	var socketDeviceID objc.ID
+	var socketDeviceID purego.ID
 	dispatch.RunOnMainThread(func() {
 		devices := vm.VirtualMachine.SocketDevices()
-		if devices != nil && objc.Send[uint](devices.Ptr(), objcutil.SelCount) > 0 {
-			socketDeviceID = objc.Send[objc.ID](devices.Ptr(), objcutil.SelObjectAtIndex, uint(0))
+		if devices != nil && purego.Send[uint](devices.Ptr(), objcutil.SelCount) > 0 {
+			socketDeviceID = purego.Send[purego.ID](devices.Ptr(), objcutil.SelObjectAtIndex, uint(0))
 		}
 	})
 
@@ -593,8 +591,8 @@ func (vm *VM) Connect(ctx context.Context, toPort uint32) (*virtualization.VZVir
 		return nil, weaveerrors.ErrVMSocketFailed(toPort, ", VM has no socket devices configured")
 	}
 
-	isVirtio := objc.Send[bool](socketDeviceID, objc.RegisterName("isKindOfClass:"),
-		objc.GetClass("VZVirtioSocketDevice"))
+	isVirtio := purego.Send[bool](socketDeviceID, purego.RegisterName("isKindOfClass:"),
+		purego.GetClass("VZVirtioSocketDevice"))
 	if !isVirtio {
 		return nil, weaveerrors.ErrVMSocketFailed(toPort, ", expected VM's first socket device to have a type of VZVirtioSocketDevice")
 	}
@@ -604,15 +602,15 @@ func (vm *VM) Connect(ctx context.Context, toPort uint32) (*virtualization.VZVir
 		err        error
 	}
 	resultCh := make(chan result, 1)
-	block := objc.NewBlock(func(_ objc.Block, connectionID objc.ID, errID objc.ID) {
+	block := purego.NewBlock(func(_ purego.Block, connectionID purego.ID, errID purego.ID) {
 		if errID != 0 {
-			resultCh <- result{err: pureobjc.NSErrorToError(errID)}
+			resultCh <- result{err: purego.NSErrorToError(errID)}
 			return
 		}
-		resultCh <- result{connection: virtualization.VZVirtioSocketConnectionFromID(pureobjc.Retain(connectionID))}
+		resultCh <- result{connection: virtualization.VZVirtioSocketConnectionFromID(purego.Retain(connectionID))}
 	})
 	dispatch.RunOnMainThread(func() {
-		socketDeviceID.Send(objc.RegisterName("connectToPort:completionHandler:"), toPort, block)
+		socketDeviceID.Send(purego.RegisterName("connectToPort:completionHandler:"), toPort, block)
 	})
 
 	select {
@@ -645,9 +643,9 @@ func (vm *VM) Run(ctx context.Context) error {
 // startMachine ports the @MainActor VM.start(_ recovery:).
 func (vm *VM) startMachine(recovery bool) error {
 	errCh := make(chan error, 1)
-	block := objc.NewBlock(func(_ objc.Block, errID objc.ID) {
+	block := purego.NewBlock(func(_ purego.Block, errID purego.ID) {
 		if errID != 0 {
-			errCh <- pureobjc.NSErrorToError(errID)
+			errCh <- purego.NSErrorToError(errID)
 		} else {
 			errCh <- nil
 		}
@@ -657,7 +655,7 @@ func (vm *VM) startMachine(recovery bool) error {
 		startOptions := idiomatic.NewMacOSVirtualMachineStartOptions().Unwrap()
 		startOptions.SetStartUpFromMacOSRecovery(recovery)
 		vm.VirtualMachine.Ptr().Send(
-			objc.RegisterName("startWithOptions:completionHandler:"), startOptions.Ptr(), block)
+			purego.RegisterName("startWithOptions:completionHandler:"), startOptions.Ptr(), block)
 	})
 
 	return <-errCh
@@ -675,15 +673,15 @@ func (vm *VM) stopMachine() error {
 
 func (vm *VM) SendErrorCompletion(selector string) error {
 	errCh := make(chan error, 1)
-	block := objc.NewBlock(func(_ objc.Block, errID objc.ID) {
+	block := purego.NewBlock(func(_ purego.Block, errID purego.ID) {
 		if errID != 0 {
-			errCh <- pureobjc.NSErrorToError(errID)
+			errCh <- purego.NSErrorToError(errID)
 		} else {
 			errCh <- nil
 		}
 	})
 	dispatch.RunOnMainThread(func() {
-		vm.VirtualMachine.Ptr().Send(objc.RegisterName(selector), block)
+		vm.VirtualMachine.Ptr().Send(purego.RegisterName(selector), block)
 	})
 	return <-errCh
 }
@@ -758,7 +756,7 @@ func craftConfiguration(diskURL *foundation.NSURL, nvramURL *foundation.NSURL,
 
 	// Networking: one VZVirtioNetworkDeviceConfiguration per NIC, each with its
 	// own attachment and MAC address (multi-NIC with per-NIC properties).
-	networkDeviceIDs := make([]objc.ID, 0, len(topology.NICs()))
+	networkDeviceIDs := make([]purego.ID, 0, len(topology.NICs()))
 	for _, nic := range topology.NICs() {
 		vio := idiomatic.NewVirtioNetworkDeviceConfiguration().Unwrap()
 		vio.SetAttachment(nic.Attachment)
@@ -767,7 +765,7 @@ func craftConfiguration(diskURL *foundation.NSURL, nvramURL *foundation.NSURL,
 	}
 	configuration.SetNetworkDevices(objcutil.NSArrayFromIDs[*virtualization.VZNetworkDeviceConfiguration](networkDeviceIDs...))
 
-	consoleDeviceIDs := make([]objc.ID, 0, 2)
+	consoleDeviceIDs := make([]purego.ID, 0, 2)
 
 	// Clipboard sharing via Spice agent. Skipped when the enterprise clipboard
 	// engine owns the clipboard, so its policy is the single source of truth.
@@ -798,7 +796,7 @@ func craftConfiguration(diskURL *foundation.NSURL, nvramURL *foundation.NSURL,
 		return nil, err
 	}
 
-	deviceIDs := []objc.ID{
+	deviceIDs := []purego.ID{
 		virtualization.VZVirtioBlockDeviceConfigurationFromID(objcutil.AllocClass("VZVirtioBlockDeviceConfiguration")).
 			InitWithAttachment(&attachment.VZStorageDeviceAttachment).Ptr(),
 	}
@@ -814,14 +812,14 @@ func craftConfiguration(diskURL *foundation.NSURL, nvramURL *foundation.NSURL,
 	}
 
 	// Directory sharing devices.
-	sharingIDs := make([]objc.ID, 0, len(options.DirectorySharingDevices))
+	sharingIDs := make([]purego.ID, 0, len(options.DirectorySharingDevices))
 	for _, device := range options.DirectorySharingDevices {
 		sharingIDs = append(sharingIDs, device.Ptr())
 	}
 	configuration.SetDirectorySharingDevices(objcutil.NSArrayFromIDs[*virtualization.VZDirectorySharingDeviceConfiguration](sharingIDs...))
 
 	// Serial ports.
-	serialIDs := make([]objc.ID, 0, len(options.SerialPorts))
+	serialIDs := make([]purego.ID, 0, len(options.SerialPorts))
 	for _, port := range options.SerialPorts {
 		serialIDs = append(serialIDs, port.Ptr())
 	}
@@ -854,11 +852,11 @@ func craftConfiguration(diskURL *foundation.NSURL, nvramURL *foundation.NSURL,
 // setConsolePort mirrors Swift's consoleDevice.ports[0] = port subscript.
 func setConsolePort(device *virtualization.VZVirtioConsoleDeviceConfiguration, index uint, port *virtualization.VZVirtioConsolePortConfiguration) {
 	ports := device.Ports()
-	ports.Ptr().Send(objc.RegisterName("setObject:atIndexedSubscript:"), port.Ptr(), index)
+	ports.Ptr().Send(purego.RegisterName("setObject:atIndexedSubscript:"), port.Ptr(), index)
 }
 
 func keyboardArray(keyboards []*virtualization.VZKeyboardConfiguration) *foundation.NSArray[*virtualization.VZKeyboardConfiguration] {
-	ids := make([]objc.ID, 0, len(keyboards))
+	ids := make([]purego.ID, 0, len(keyboards))
 	for _, keyboard := range keyboards {
 		ids = append(ids, keyboard.Ptr())
 	}
@@ -866,7 +864,7 @@ func keyboardArray(keyboards []*virtualization.VZKeyboardConfiguration) *foundat
 }
 
 func pointingDeviceArray(devices []*virtualization.VZPointingDeviceConfiguration) *foundation.NSArray[*virtualization.VZPointingDeviceConfiguration] {
-	ids := make([]objc.ID, 0, len(devices))
+	ids := make([]purego.ID, 0, len(devices))
 	for _, device := range devices {
 		ids = append(ids, device.Ptr())
 	}

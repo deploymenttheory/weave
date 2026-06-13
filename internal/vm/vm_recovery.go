@@ -7,10 +7,8 @@
 package vm
 
 import (
-	"github.com/ebitengine/purego/objc"
-
-	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/internal/objc"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/cgo"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 )
 
 // startMachineWithRecoveryPrivateAPI ports the VZVirtualMachine.start(_
@@ -26,19 +24,19 @@ func (vm *VM) startMachineWithRecoveryPrivateAPI(recovery bool) error {
 	errCh := make(chan error, 1)
 	// The private completion handler receives `Any? result`, which is an
 	// NSError on failure and nil on success.
-	block := objc.NewBlock(func(_ objc.Block, resultID objc.ID) {
-		if resultID != 0 && objc.Send[bool](resultID, objc.RegisterName("isKindOfClass:"), objc.GetClass("NSError")) {
-			errCh <- pureobjc.NSErrorToError(resultID)
+	block := purego.NewBlock(func(_ purego.Block, resultID purego.ID) {
+		if resultID != 0 && purego.Send[bool](resultID, purego.RegisterName("isKindOfClass:"), purego.GetClass("NSError")) {
+			errCh <- purego.NSErrorToError(resultID)
 		} else {
 			errCh <- nil
 		}
 	})
 
 	dispatch.RunOnMainThread(func() {
-		options := objc.ID(objc.GetClass("_VZVirtualMachineStartOptions")).Send(objc.RegisterName("new"))
-		options.Send(objc.RegisterName("setBootMacOSRecovery:"), recovery)
+		options := purego.ID(purego.GetClass("_VZVirtualMachineStartOptions")).Send(purego.RegisterName("new"))
+		options.Send(purego.RegisterName("setBootMacOSRecovery:"), recovery)
 		vm.VirtualMachine.Ptr().Send(
-			objc.RegisterName("_startWithOptions:completionHandler:"), options, block)
+			purego.RegisterName("_startWithOptions:completionHandler:"), options, block)
 	})
 
 	return <-errCh

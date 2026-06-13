@@ -19,11 +19,9 @@ import (
 	"github.com/deploymenttheory/weave/internal/vmdirectory"
 	"github.com/deploymenttheory/weave/internal/vmstorage"
 
-	"github.com/ebitengine/purego/objc"
-
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
 	virtualization "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/virtualization"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 )
 
 // CreateCommand ports the Create command.
@@ -175,15 +173,15 @@ func FetchLatestSupportedRestoreImage(ctx context.Context) (*virtualization.VZMa
 	}
 	resultCh := make(chan result, 1)
 
-	block := objc.NewBlock(func(_ objc.Block, imageID objc.ID, errID objc.ID) {
+	block := purego.NewBlock(func(_ purego.Block, imageID purego.ID, errID purego.ID) {
 		if errID != 0 {
-			resultCh <- result{err: pureobjc.NSErrorToError(errID)}
+			resultCh <- result{err: purego.NSErrorToError(errID)}
 			return
 		}
-		resultCh <- result{image: virtualization.VZMacOSRestoreImageFromID(pureobjc.Retain(imageID))}
+		resultCh <- result{image: virtualization.VZMacOSRestoreImageFromID(purego.Retain(imageID))}
 	})
-	objc.ID(objc.GetClass("VZMacOSRestoreImage")).Send(
-		objc.RegisterName("fetchLatestSupportedWithCompletionHandler:"), block)
+	purego.ID(purego.GetClass("VZMacOSRestoreImage")).Send(
+		purego.RegisterName("fetchLatestSupportedWithCompletionHandler:"), block)
 
 	select {
 	case r := <-resultCh:

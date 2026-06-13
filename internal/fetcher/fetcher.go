@@ -14,10 +14,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/ebitengine/purego/objc"
-
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 	"github.com/deploymenttheory/weave/internal/objcutil"
 )
 
@@ -57,16 +55,16 @@ func FetcherFetch(ctx context.Context, request *foundation.NSURLRequest, viaFile
 	resultCh := make(chan downloadResult, 1)
 
 	// The generated DownloadTaskWithRequestCompletionHandler cannot be used:
-	// purego's objc.NewBlock requires the Go function to take the Block as
+	// purego's purego.NewBlock requires the Go function to take the Block as
 	// its first parameter, which the generated bindings omit. Build the
 	// block and send the message directly instead.
-	completionBlock := objc.NewBlock(func(_ objc.Block, locationID objc.ID, responseID objc.ID, errID objc.ID) {
+	completionBlock := purego.NewBlock(func(_ purego.Block, locationID purego.ID, responseID purego.ID, errID purego.ID) {
 		if errID != 0 {
-			resultCh <- downloadResult{err: pureobjc.NSErrorToError(errID)}
+			resultCh <- downloadResult{err: purego.NSErrorToError(errID)}
 			return
 		}
-		locationURL := foundation.NSURLFromID(pureobjc.Retain(locationID))
-		httpResponse := foundation.NSHTTPURLResponseFromID(pureobjc.Retain(responseID))
+		locationURL := foundation.NSURLFromID(purego.Retain(locationID))
+		httpResponse := foundation.NSHTTPURLResponseFromID(purego.Retain(responseID))
 
 		// The download's temporary file is deleted as soon as this handler
 		// returns, so move it aside first.
@@ -81,9 +79,9 @@ func FetcherFetch(ctx context.Context, request *foundation.NSURLRequest, viaFile
 		resultCh <- downloadResult{spoolPath: spoolPath, response: httpResponse}
 	})
 
-	taskID := objc.Send[objc.ID](fetcherURLSession().Ptr(),
-		objc.RegisterName("downloadTaskWithRequest:completionHandler:"), request.Ptr(), completionBlock)
-	task := foundation.NSURLSessionDownloadTaskFromID(pureobjc.Retain(taskID))
+	taskID := purego.Send[purego.ID](fetcherURLSession().Ptr(),
+		purego.RegisterName("downloadTaskWithRequest:completionHandler:"), request.Ptr(), completionBlock)
+	task := foundation.NSURLSessionDownloadTaskFromID(purego.Retain(taskID))
 	task.Resume()
 
 	var result downloadResult

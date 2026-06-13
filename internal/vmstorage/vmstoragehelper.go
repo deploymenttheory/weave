@@ -16,7 +16,7 @@ import (
 	"github.com/deploymenttheory/weave/internal/vmdirectory"
 
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc/objcerrors"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego/objcerrors"
 )
 
 // VMStorageHelperOpen ports VMStorageHelper.open(_:): dispatches to the OCI

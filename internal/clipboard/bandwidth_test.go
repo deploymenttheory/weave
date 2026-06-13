@@ -37,7 +37,7 @@ func TestLimiterThrottles(t *testing.T) {
 }
 
 func TestLimiterContextCancel(t *testing.T) {
-	l := newLimiter(1000) // burst 1000
+	l := newLimiter(1000)                   // burst 1000
 	_ = l.waitN(context.Background(), 1000) // drain the burst
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()

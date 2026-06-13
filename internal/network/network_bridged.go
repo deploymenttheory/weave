@@ -14,9 +14,7 @@ import (
 	"github.com/deploymenttheory/weave/internal/objcutil"
 	"github.com/deploymenttheory/weave/internal/vmconfig"
 
-	"github.com/ebitengine/purego/objc"
-
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 )
 
 // buildBridged constructs a bridged NIC, resolving the host interface by
@@ -40,10 +38,10 @@ func FindBridgedInterface(name string) (*virtualization.VZBridgedNetworkInterfac
 	if interfaces == nil {
 		return nil, false
 	}
-	count := objc.Send[uint](interfaces.Ptr(), objcutil.SelCount)
+	count := purego.Send[uint](interfaces.Ptr(), objcutil.SelCount)
 	for i := range count {
-		id := objc.Send[objc.ID](interfaces.Ptr(), objcutil.SelObjectAtIndex, i)
-		iface := virtualization.VZBridgedNetworkInterfaceFromID(pureobjc.Retain(id))
+		id := purego.Send[purego.ID](interfaces.Ptr(), objcutil.SelObjectAtIndex, i)
+		iface := virtualization.VZBridgedNetworkInterfaceFromID(purego.Retain(id))
 		if name == "" ||
 			objcutil.GoStr(iface.Identifier()) == name ||
 			objcutil.GoStr(iface.LocalizedDisplayName()) == name {
@@ -61,10 +59,10 @@ func BridgeInterfaces() []string {
 	if interfaces == nil {
 		return nil
 	}
-	count := objc.Send[uint](interfaces.Ptr(), objcutil.SelCount)
+	count := purego.Send[uint](interfaces.Ptr(), objcutil.SelCount)
 	for i := range count {
-		id := objc.Send[objc.ID](interfaces.Ptr(), objcutil.SelObjectAtIndex, i)
-		iface := virtualization.VZBridgedNetworkInterfaceFromID(pureobjc.Retain(id))
+		id := purego.Send[purego.ID](interfaces.Ptr(), objcutil.SelObjectAtIndex, i)
+		iface := virtualization.VZBridgedNetworkInterfaceFromID(purego.Retain(id))
 
 		description := objcutil.GoStr(iface.Identifier())
 		if displayName := objcutil.GoStr(iface.LocalizedDisplayName()); displayName != "" {

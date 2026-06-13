@@ -6,11 +6,9 @@
 package vm
 
 import (
-	"github.com/ebitengine/purego/objc"
-
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
-	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/internal/objc"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	dispatch "github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/cgo"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 )
 
 // restoreMachineStateFrom / saveMachineStateTo bridge the macOS 14 snapshot
@@ -25,15 +23,15 @@ func (vm *VM) SaveMachineStateTo(url *foundation.NSURL) error {
 
 func (vm *VM) sendURLErrorCompletion(selector string, url *foundation.NSURL) error {
 	errCh := make(chan error, 1)
-	block := objc.NewBlock(func(_ objc.Block, errID objc.ID) {
+	block := purego.NewBlock(func(_ purego.Block, errID purego.ID) {
 		if errID != 0 {
-			errCh <- pureobjc.NSErrorToError(errID)
+			errCh <- purego.NSErrorToError(errID)
 		} else {
 			errCh <- nil
 		}
 	})
 	dispatch.RunOnMainThread(func() {
-		vm.VirtualMachine.Ptr().Send(objc.RegisterName(selector), url.Ptr(), block)
+		vm.VirtualMachine.Ptr().Send(purego.RegisterName(selector), url.Ptr(), block)
 	})
 	return <-errCh
 }

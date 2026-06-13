@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ebitengine/purego/objc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
 	"github.com/deploymenttheory/weave/internal/objcutil"
@@ -30,7 +30,7 @@ type ARPCache struct {
 
 // NewARPCache ports ARPCache.init(): runs "arp -an" and captures its output.
 func NewARPCache() (*ARPCache, error) {
-	task := foundation.NSTaskFromID(objc.Send[objc.ID](objc.ID(objc.GetClass("NSTask")), objc.RegisterName("new")))
+	task := foundation.NSTaskFromID(purego.Send[purego.ID](purego.ID(purego.GetClass("NSTask")), purego.RegisterName("new")))
 	task.SetExecutableURL(objcutil.NSURLFromPath("/usr/sbin/arp"))
 	task.SetArguments(objcutil.NSStringArray([]string{"-an"}))
 

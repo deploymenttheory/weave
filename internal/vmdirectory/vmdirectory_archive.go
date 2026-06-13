@@ -8,10 +8,10 @@
 package vmdirectory
 
 import (
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 	"github.com/deploymenttheory/weave/internal/diskimage"
 	weaveerrors "github.com/deploymenttheory/weave/internal/errors"
 	"github.com/deploymenttheory/weave/internal/objcutil"
-	"github.com/ebitengine/purego/objc"
 
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
 )
@@ -42,7 +42,7 @@ func (d *VMDirectory) ImportFromArchive(path string) error {
 }
 
 func runAA(arguments []string) error {
-	task := foundation.NSTaskFromID(objc.Send[objc.ID](objc.ID(objc.GetClass("NSTask")), objc.RegisterName("new")))
+	task := foundation.NSTaskFromID(purego.Send[purego.ID](purego.ID(purego.GetClass("NSTask")), purego.RegisterName("new")))
 	task.SetExecutableURL(objcutil.NSURLFromPath("/usr/bin/aa"))
 	task.SetArguments(objcutil.NSStringArray(arguments))
 

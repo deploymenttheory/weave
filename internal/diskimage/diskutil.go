@@ -12,10 +12,8 @@ import (
 	weaveerrors "github.com/deploymenttheory/weave/internal/errors"
 	"github.com/deploymenttheory/weave/internal/objcutil"
 
-	"github.com/ebitengine/purego/objc"
-
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 )
 
 // SizeInfo ports Diskutil.swift's SizeInfo ("Size Info" plist dictionary).
@@ -73,14 +71,14 @@ func DiskutilImageInfo(diskURL *foundation.NSURL) (*ImageInfo, error) {
 	}
 
 	info := &ImageInfo{}
-	if sizeID := objc.Send[objc.ID](plistID, objcutil.SelObjectForKey, pureobjc.NSString("Size")); sizeID != 0 {
-		size := foundation.NSNumberFromID(pureobjc.Retain(sizeID)).UnsignedLongLongValue()
+	if sizeID := purego.Send[purego.ID](plistID, objcutil.SelObjectForKey, purego.NSString("Size")); sizeID != 0 {
+		size := foundation.NSNumberFromID(purego.Retain(sizeID)).UnsignedLongLongValue()
 		info.Size = &size
 	}
-	if sizeInfoID := objc.Send[objc.ID](plistID, objcutil.SelObjectForKey, pureobjc.NSString("Size Info")); sizeInfoID != 0 {
+	if sizeInfoID := purego.Send[purego.ID](plistID, objcutil.SelObjectForKey, purego.NSString("Size Info")); sizeInfoID != 0 {
 		info.SizeInfo = &SizeInfo{}
-		if totalID := objc.Send[objc.ID](sizeInfoID, objcutil.SelObjectForKey, pureobjc.NSString("Total Bytes")); totalID != 0 {
-			totalBytes := foundation.NSNumberFromID(pureobjc.Retain(totalID)).UnsignedLongLongValue()
+		if totalID := purego.Send[purego.ID](sizeInfoID, objcutil.SelObjectForKey, purego.NSString("Total Bytes")); totalID != 0 {
+			totalBytes := foundation.NSNumberFromID(purego.Retain(totalID)).UnsignedLongLongValue()
 			info.SizeInfo.TotalBytes = &totalBytes
 		}
 	}
@@ -96,7 +94,7 @@ func DiskutilRun(arguments []string) ([]byte, []byte, error) {
 		return nil, nil, weaveerrors.ErrGeneric("\"diskutil\" binary is not found in PATH")
 	}
 
-	task := foundation.NSTaskFromID(objc.Send[objc.ID](objc.ID(objc.GetClass("NSTask")), objc.RegisterName("new")))
+	task := foundation.NSTaskFromID(purego.Send[purego.ID](purego.ID(purego.GetClass("NSTask")), purego.RegisterName("new")))
 	task.SetExecutableURL(diskutilURL)
 	task.SetArguments(objcutil.NSStringArray(arguments))
 

@@ -22,7 +22,7 @@ import (
 	"github.com/deploymenttheory/weave/internal/vmdirectory"
 
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 	idiomaticfoundation "github.com/deploymenttheory/go-bindings-macosplatform/opinionated/idiomatic/foundation"
 )
 
@@ -42,10 +42,10 @@ func AvailableCapacityBytes(path string) (uint64, error) {
 
 	var capacity uint64
 	if available != 0 {
-		capacity = uint64(foundation.NSNumberFromID(pureobjc.Retain(available)).IntegerValue())
+		capacity = uint64(foundation.NSNumberFromID(purego.Retain(available)).IntegerValue())
 	}
 	if availableImportant != 0 {
-		if v := uint64(foundation.NSNumberFromID(pureobjc.Retain(availableImportant)).UnsignedLongLongValue()); v > capacity {
+		if v := uint64(foundation.NSNumberFromID(purego.Retain(availableImportant)).UnsignedLongLongValue()); v > capacity {
 			capacity = v
 		}
 	}

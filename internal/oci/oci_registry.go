@@ -29,7 +29,7 @@ import (
 	"github.com/deploymenttheory/weave/internal/telemetry"
 
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
-	"github.com/ebitengine/purego/objc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 )
 
 // RegistryError ports tart's RegistryError enum.
@@ -456,8 +456,8 @@ func (r *Registry) channelRequest(ctx context.Context, method string, endpoint *
 	}
 
 	buildRequest := func() *foundation.NSMutableURLRequest {
-		request := foundation.NSMutableURLRequestFromID(objc.Send[objc.ID](
-			objcutil.AllocClass("NSMutableURLRequest"), objc.RegisterName("initWithURL:"),
+		request := foundation.NSMutableURLRequestFromID(purego.Send[purego.ID](
+			objcutil.AllocClass("NSMutableURLRequest"), purego.RegisterName("initWithURL:"),
 			foundation.NSURLURLWithString(objcutil.NSStr(requestURL.String())).Ptr()))
 		request.SetHTTPMethod(objcutil.NSStr(method))
 		for key, value := range headers {

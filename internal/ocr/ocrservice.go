@@ -19,8 +19,7 @@ import (
 
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
 	vision "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/vision"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
-	"github.com/ebitengine/purego/objc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 )
 
 // ocrMinimumConfidence mirrors OCRService's default minimumConfidence.
@@ -61,7 +60,7 @@ func RecognizeText(img image.Image) ([]TextObservation, error) {
 	height := img.Bounds().Dy()
 
 	request := vision.VNRecognizeTextRequestFromID(
-		objc.Send[objc.ID](objcutil.AllocClass("VNRecognizeTextRequest"), objc.RegisterName("init")))
+		purego.Send[purego.ID](objcutil.AllocClass("VNRecognizeTextRequest"), purego.RegisterName("init")))
 	request.SetRecognitionLevel(vision.VNRequestTextRecognitionLevelAccurate)
 	request.SetUsesLanguageCorrection(false)
 	// Revision 3 supports the latest recognition features (OCRService.swift).
@@ -70,8 +69,8 @@ func RecognizeText(img image.Image) ([]TextObservation, error) {
 	handler := vision.VNImageRequestHandlerFromID(objcutil.AllocClass("VNImageRequestHandler")).
 		InitWithURLOptions(objcutil.NSURLFromPath(tempPath), nil)
 
-	requests := foundation.NSArrayFromID[*vision.VNRequest](pureobjc.Retain(objc.Send[objc.ID](
-		objc.ID(objc.GetClass("NSArray")), objc.RegisterName("arrayWithObject:"), request.Ptr())))
+	requests := foundation.NSArrayFromID[*vision.VNRequest](purego.Retain(purego.Send[purego.ID](
+		purego.ID(purego.GetClass("NSArray")), purego.RegisterName("arrayWithObject:"), request.Ptr())))
 	if _, err := handler.PerformRequestsError(requests); err != nil {
 		return nil, weaveerrors.ErrOCRFailed(err.Error())
 	}
@@ -82,17 +81,17 @@ func RecognizeText(img image.Image) ([]TextObservation, error) {
 	}
 
 	var observations []TextObservation
-	count := objc.Send[uint](results.Ptr(), objcutil.SelCount)
+	count := purego.Send[uint](results.Ptr(), objcutil.SelCount)
 	for i := range count {
-		id := objc.Send[objc.ID](results.Ptr(), objcutil.SelObjectAtIndex, i)
-		textObservation := vision.VNRecognizedTextObservationFromID(pureobjc.Retain(id))
+		id := purego.Send[purego.ID](results.Ptr(), objcutil.SelObjectAtIndex, i)
+		textObservation := vision.VNRecognizedTextObservationFromID(purego.Retain(id))
 
 		candidates := textObservation.TopCandidates(1)
-		if candidates == nil || objc.Send[uint](candidates.Ptr(), objcutil.SelCount) == 0 {
+		if candidates == nil || purego.Send[uint](candidates.Ptr(), objcutil.SelCount) == 0 {
 			continue
 		}
-		candidate := vision.VNRecognizedTextFromID(pureobjc.Retain(
-			objc.Send[objc.ID](candidates.Ptr(), objcutil.SelObjectAtIndex, uint(0))))
+		candidate := vision.VNRecognizedTextFromID(purego.Retain(
+			purego.Send[purego.ID](candidates.Ptr(), objcutil.SelObjectAtIndex, uint(0))))
 
 		confidence := candidate.Confidence()
 		if confidence < ocrMinimumConfidence {

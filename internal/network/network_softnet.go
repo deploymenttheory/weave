@@ -18,7 +18,7 @@ import (
 	"github.com/deploymenttheory/weave/internal/objcutil"
 	"github.com/deploymenttheory/weave/internal/vmconfig"
 
-	"github.com/ebitengine/purego/objc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
 	virtualization "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/virtualization"
@@ -103,7 +103,7 @@ func NewSoftnet(vmMACAddress string, extraArguments ...string) (*Softnet, error)
 		return nil, err
 	}
 
-	task := foundation.NSTaskFromID(objc.Send[objc.ID](objc.ID(objc.GetClass("NSTask")), objc.RegisterName("new")))
+	task := foundation.NSTaskFromID(purego.Send[purego.ID](purego.ID(purego.GetClass("NSTask")), purego.RegisterName("new")))
 	task.SetExecutableURL(executableURL)
 	arguments := append([]string{"--vm-fd", "0", "--vm-mac-address", vmMACAddress}, extraArguments...)
 	task.SetArguments(objcutil.NSStringArray(arguments))
@@ -211,7 +211,7 @@ func SoftnetConfigureSUIDBitIfNeeded() error {
 		return softnetInitializationFailed("sudo not found in PATH")
 	}
 
-	probe := foundation.NSTaskFromID(objc.Send[objc.ID](objc.ID(objc.GetClass("NSTask")), objc.RegisterName("new")))
+	probe := foundation.NSTaskFromID(purego.Send[purego.ID](purego.ID(purego.GetClass("NSTask")), purego.RegisterName("new")))
 	probe.SetExecutableURL(sudoExecutableURL)
 	probe.SetArguments(objcutil.NSStringArray([]string{"--non-interactive", "softnet", "--help"}))
 	if _, err := probe.LaunchAndReturnError(); err != nil {
@@ -226,7 +226,7 @@ func SoftnetConfigureSUIDBitIfNeeded() error {
 	// the user for the password required to run chown & chmod.
 	fmt.Fprintln(os.Stderr, "Softnet requires a Sudo password to set the SUID bit on the Softnet executable, please enter it below.")
 
-	elevate := foundation.NSTaskFromID(objc.Send[objc.ID](objc.ID(objc.GetClass("NSTask")), objc.RegisterName("new")))
+	elevate := foundation.NSTaskFromID(purego.Send[purego.ID](purego.ID(purego.GetClass("NSTask")), purego.RegisterName("new")))
 	elevate.SetExecutableURL(sudoExecutableURL)
 	elevate.SetArguments(objcutil.NSStringArray([]string{
 		"sh", "-c",

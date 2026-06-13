@@ -55,7 +55,7 @@ var canonicalToUTI = map[Canonical]string{
 // format. Several UTIs collapse to one canonical form (com.apple.flat-rtfd, a
 // macOS bundle, degrades to text/rtf so it survives a Linux round-trip).
 var utiToCanonical = map[string]Canonical{
-	"public.utf8-plain-text": CanonPlainText,
+	"public.utf8-plain-text":  CanonPlainText,
 	"public.utf16-plain-text": CanonPlainText,
 	"public.plain-text":       CanonPlainText,
 	"NSStringPboardType":      CanonPlainText,

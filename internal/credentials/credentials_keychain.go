@@ -10,10 +10,8 @@ import (
 	"strconv"
 	"unsafe"
 
-	"github.com/ebitengine/purego/objc"
-
 	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/security"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 	"github.com/deploymenttheory/weave/internal/objcutil"
 )
 
@@ -34,21 +32,21 @@ func (p *KeychainCredentialsProvider) UserFriendlyName() string {
 }
 
 var (
-	selDictionary      = objc.RegisterName("dictionary")
-	selSetObjectForKey = objc.RegisterName("setObject:forKey:")
+	selDictionary      = purego.RegisterName("dictionary")
+	selSetObjectForKey = purego.RegisterName("setObject:forKey:")
 )
 
-func newMutableDictionary() objc.ID {
-	return objc.Send[objc.ID](objc.ID(objc.GetClass("NSMutableDictionary")), selDictionary)
+func newMutableDictionary() purego.ID {
+	return purego.Send[purego.ID](purego.ID(purego.GetClass("NSMutableDictionary")), selDictionary)
 }
 
 // secConstant dereferences a kSec* extern symbol address (as returned by the
 // generated raw accessors) to the CFTypeRef constant it points at.
-func secConstant(symbolAddr uintptr) objc.ID {
+func secConstant(symbolAddr uintptr) purego.ID {
 	if symbolAddr == 0 {
 		return 0
 	}
-	return *(*objc.ID)(launderPointer(symbolAddr))
+	return *(*purego.ID)(launderPointer(symbolAddr))
 }
 
 // launderPointer converts a C symbol/object address held in a uintptr to an
@@ -62,27 +60,27 @@ func launderPointer(addr uintptr) unsafe.Pointer {
 }
 
 // idPointer passes an ObjC object id as a CFTypeRef-style unsafe.Pointer.
-func idPointer(id objc.ID) unsafe.Pointer {
+func idPointer(id purego.ID) unsafe.Pointer {
 	return launderPointer(uintptr(id))
 }
 
-func dictSet(dict objc.ID, keySymbolAddr uintptr, value objc.ID) {
+func dictSet(dict purego.ID, keySymbolAddr uintptr, value purego.ID) {
 	dict.Send(selSetObjectForKey, value, secConstant(keySymbolAddr))
 }
 
-func nsNumberWithBool(value bool) objc.ID {
-	return objc.Send[objc.ID](objc.ID(objc.GetClass("NSNumber")), objc.RegisterName("numberWithBool:"), value)
+func nsNumberWithBool(value bool) purego.ID {
+	return purego.Send[purego.ID](purego.ID(purego.GetClass("NSNumber")), purego.RegisterName("numberWithBool:"), value)
 }
 
 func (p *KeychainCredentialsProvider) Retrieve(host string) (string, string, bool, error) {
 	query := newMutableDictionary()
 	dictSet(query, security.KSecClass(), secConstant(security.KSecClassInternetPassword()))
 	dictSet(query, security.KSecAttrProtocol(), secConstant(security.KSecAttrProtocolHTTPS()))
-	dictSet(query, security.KSecAttrServer(), pureobjc.NSString(host))
+	dictSet(query, security.KSecAttrServer(), purego.NSString(host))
 	dictSet(query, security.KSecMatchLimit(), secConstant(security.KSecMatchLimitOne()))
 	dictSet(query, security.KSecReturnAttributes(), nsNumberWithBool(true))
 	dictSet(query, security.KSecReturnData(), nsNumberWithBool(true))
-	dictSet(query, security.KSecAttrLabel(), pureobjc.NSString(keychainCredentialsLabel))
+	dictSet(query, security.KSecAttrLabel(), purego.NSString(keychainCredentialsLabel))
 
 	var item uintptr
 	status := security.SecItemCopyMatching(idPointer(query), unsafe.Pointer(&item))
@@ -94,16 +92,16 @@ func (p *KeychainCredentialsProvider) Retrieve(host string) (string, string, boo
 		return "", "", false, credentialsProviderFailed("Keychain returned unsuccessful status %d", status)
 	}
 
-	itemID := objc.ID(item)
-	userID := objc.Send[objc.ID](itemID, objcutil.SelObjectForKey, secConstant(security.KSecAttrAccount()))
-	passwordDataID := objc.Send[objc.ID](itemID, objcutil.SelObjectForKey, secConstant(security.KSecValueData()))
+	itemID := purego.ID(item)
+	userID := purego.Send[purego.ID](itemID, objcutil.SelObjectForKey, secConstant(security.KSecAttrAccount()))
+	passwordDataID := purego.Send[purego.ID](itemID, objcutil.SelObjectForKey, secConstant(security.KSecValueData()))
 	if userID == 0 || passwordDataID == 0 {
 		return "", "", false, credentialsProviderFailed("Keychain item has unexpected format")
 	}
 
-	user := pureobjc.GoString(userID)
-	passwordLength := objc.Send[uint](passwordDataID, objc.RegisterName("length"))
-	passwordBytes := objc.Send[unsafe.Pointer](passwordDataID, objc.RegisterName("bytes"))
+	user := purego.GoString(userID)
+	passwordLength := purego.Send[uint](passwordDataID, purego.RegisterName("length"))
+	passwordBytes := purego.Send[unsafe.Pointer](passwordDataID, purego.RegisterName("bytes"))
 	password := string(unsafe.Slice((*byte)(passwordBytes), passwordLength))
 
 	return user, password, true, nil
@@ -113,11 +111,11 @@ func (p *KeychainCredentialsProvider) Store(host string, user string, password s
 	key := newMutableDictionary()
 	dictSet(key, security.KSecClass(), secConstant(security.KSecClassInternetPassword()))
 	dictSet(key, security.KSecAttrProtocol(), secConstant(security.KSecAttrProtocolHTTPS()))
-	dictSet(key, security.KSecAttrServer(), pureobjc.NSString(host))
-	dictSet(key, security.KSecAttrLabel(), pureobjc.NSString(keychainCredentialsLabel))
+	dictSet(key, security.KSecAttrServer(), purego.NSString(host))
+	dictSet(key, security.KSecAttrLabel(), purego.NSString(keychainCredentialsLabel))
 
 	value := newMutableDictionary()
-	dictSet(value, security.KSecAttrAccount(), pureobjc.NSString(user))
+	dictSet(value, security.KSecAttrAccount(), purego.NSString(user))
 	dictSet(value, security.KSecValueData(), objcutil.BytesToNSData([]byte(password)).Ptr())
 
 	status := security.SecItemCopyMatching(idPointer(key), nil)
@@ -125,8 +123,8 @@ func (p *KeychainCredentialsProvider) Store(host string, user string, password s
 	switch status {
 	case errSecItemNotFound:
 		merged := newMutableDictionary()
-		merged.Send(objc.RegisterName("addEntriesFromDictionary:"), key)
-		merged.Send(objc.RegisterName("addEntriesFromDictionary:"), value)
+		merged.Send(purego.RegisterName("addEntriesFromDictionary:"), key)
+		merged.Send(purego.RegisterName("addEntriesFromDictionary:"), value)
 		if status := security.SecItemAdd(idPointer(merged), nil); status != errSecSuccess {
 			return credentialsProviderFailed("Keychain failed to add item: %s", secStatusExplanation(status))
 		}
@@ -145,8 +143,8 @@ func (p *KeychainCredentialsProvider) Store(host string, user string, password s
 func (p *KeychainCredentialsProvider) Remove(host string) error {
 	query := newMutableDictionary()
 	dictSet(query, security.KSecClass(), secConstant(security.KSecClassInternetPassword()))
-	dictSet(query, security.KSecAttrServer(), pureobjc.NSString(host))
-	dictSet(query, security.KSecAttrLabel(), pureobjc.NSString(keychainCredentialsLabel))
+	dictSet(query, security.KSecAttrServer(), purego.NSString(host))
+	dictSet(query, security.KSecAttrLabel(), purego.NSString(keychainCredentialsLabel))
 
 	switch status := security.SecItemDelete(idPointer(query)); status {
 	case errSecSuccess, errSecItemNotFound:
@@ -162,5 +160,5 @@ func secStatusExplanation(status int) string {
 	if message == nil {
 		return "Unknown status code " + strconv.Itoa(status)
 	}
-	return pureobjc.GoString(objc.ID(uintptr(message)))
+	return purego.GoString(purego.ID(uintptr(message)))
 }

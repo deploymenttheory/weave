@@ -12,7 +12,7 @@ import (
 	"github.com/deploymenttheory/weave/internal/objcutil"
 
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 )
 
 // URLAccessDate ports URL.accessDate(): the contentAccessDate resource value.
@@ -27,7 +27,7 @@ func URLAccessDate(url *foundation.NSURL) (time.Time, error) {
 		return time.Time{}, weaveerrors.ErrGeneric("missing contentAccessDate resource value for %s", objcutil.GoStr(url.Path()))
 	}
 
-	seconds := foundation.NSDateFromID(pureobjc.Retain(dateID)).TimeIntervalSince1970()
+	seconds := foundation.NSDateFromID(purego.Retain(dateID)).TimeIntervalSince1970()
 	return time.Unix(0, int64(seconds*float64(time.Second))), nil
 }
 

@@ -15,10 +15,8 @@ import (
 	weaveerrors "github.com/deploymenttheory/weave/internal/errors"
 	"github.com/deploymenttheory/weave/internal/objcutil"
 
-	"github.com/ebitengine/purego/objc"
-
 	foundation "github.com/deploymenttheory/go-bindings-macosplatform/bindings/frameworks/foundation"
-	"github.com/deploymenttheory/go-bindings-macosplatform/internal/pureobjc"
+	"github.com/deploymenttheory/go-bindings-macosplatform/bindings/runtime/purego"
 )
 
 const deduplicatedBytesXattr = "run.weave.deduplicated-bytes"
@@ -61,7 +59,7 @@ func (p *PrunableURL) DeduplicatedSizeBytes() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if mayShareID != 0 && foundation.NSNumberFromID(pureobjc.Retain(mayShareID)).BoolValue() {
+	if mayShareID != 0 && foundation.NSNumberFromID(purego.Retain(mayShareID)).BoolValue() {
 		return int(p.DeduplicatedBytes()), nil
 	}
 	return 0, nil
@@ -89,7 +87,7 @@ func (p *PrunableURL) DeduplicatedBytes() uint64 {
 	return value
 }
 
-func (p *PrunableURL) intResourceValue(keyID objc.ID, name string) (int, error) {
+func (p *PrunableURL) intResourceValue(keyID purego.ID, name string) (int, error) {
 	id, err := objcutil.URLResourceValue(p.url, keyID)
 	if err != nil {
 		return 0, err
@@ -97,7 +95,7 @@ func (p *PrunableURL) intResourceValue(keyID objc.ID, name string) (int, error) 
 	if id == 0 {
 		return 0, weaveerrors.ErrGeneric("missing %s resource value for %s", name, objcutil.GoStr(p.url.Path()))
 	}
-	return foundation.NSNumberFromID(pureobjc.Retain(id)).IntegerValue(), nil
+	return foundation.NSNumberFromID(purego.Retain(id)).IntegerValue(), nil
 }
 
 // setxattrFile and getxattrFile replace the Swift XAttr package; package
