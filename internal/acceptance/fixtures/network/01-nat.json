@@ -1,0 +1,25 @@
+{
+  "name": "nat",
+  "description": "Apple shared/NAT on Linux: internet + host + peers",
+  "vm": {
+    "os": "linux",
+    "diskSizeGB": 8,
+    "diskFormat": "raw",
+    "cpu": 2,
+    "memoryMB": 2048,
+    "display": { "width": 1024, "height": 768 }
+  },
+  "run": {
+    "headless": true,
+    "vnc": "none"
+  },
+  "network": {
+    "nics": [
+      { "mode": "nat", "isPrimary": true }
+    ]
+  },
+  "expect": {
+    "primaryMode": "nat",
+    "distinctMACs": true
+  }
+}

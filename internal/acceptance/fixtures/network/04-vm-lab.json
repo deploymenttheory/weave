@@ -1,0 +1,25 @@
+{
+  "name": "vm-lab",
+  "description": "vmnet host-mode segment on Linux: peers interconnect, no host or internet",
+  "vm": {
+    "os": "linux",
+    "diskSizeGB": 8,
+    "diskFormat": "raw",
+    "cpu": 2,
+    "memoryMB": 2048,
+    "display": { "width": 1024, "height": 768 }
+  },
+  "run": {
+    "headless": true,
+    "vnc": "experimental"
+  },
+  "network": {
+    "nics": [
+      { "mode": "vmnet", "isPrimary": true, "vmnetMode": "host" }
+    ]
+  },
+  "expect": {
+    "primaryMode": "vmnet",
+    "primaryVmnetMode": "host"
+  }
+}

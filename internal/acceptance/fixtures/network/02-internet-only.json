@@ -1,0 +1,25 @@
+{
+  "name": "internet-only",
+  "description": "softnet default filtering on Linux: internet but no host or peers",
+  "vm": {
+    "os": "linux",
+    "diskSizeGB": 8,
+    "diskFormat": "raw",
+    "cpu": 2,
+    "memoryMB": 2048,
+    "display": { "width": 1024, "height": 768 }
+  },
+  "run": {
+    "headless": true,
+    "vnc": "experimental"
+  },
+  "network": {
+    "nics": [
+      { "mode": "softnet", "isPrimary": true }
+    ]
+  },
+  "expect": {
+    "primaryMode": "softnet",
+    "primarySoftnetBlock": ""
+  }
+}

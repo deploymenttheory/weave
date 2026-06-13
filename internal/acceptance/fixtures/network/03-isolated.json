@@ -1,0 +1,25 @@
+{
+  "name": "isolated",
+  "description": "softnet air-gap on Linux: blocks all egress (VNC + vsock management only)",
+  "vm": {
+    "os": "linux",
+    "diskSizeGB": 8,
+    "diskFormat": "raw",
+    "cpu": 2,
+    "memoryMB": 2048,
+    "display": { "width": 1024, "height": 768 }
+  },
+  "run": {
+    "headless": true,
+    "vnc": "experimental"
+  },
+  "network": {
+    "nics": [
+      { "mode": "softnet", "isPrimary": true, "softnetBlock": "0.0.0.0/0" }
+    ]
+  },
+  "expect": {
+    "primaryMode": "softnet",
+    "primarySoftnetBlock": "0.0.0.0/0"
+  }
+}

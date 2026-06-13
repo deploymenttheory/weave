@@ -1,0 +1,307 @@
+# Unattended macOS Tahoe (26.5.1) Setup Assistant configuration.
+#
+# Built from the ground up on 2026-06-10 by driving a brand-new VM
+# screen-by-screen via the MCP screen tools, recording only the actions that
+# actually advance each screen, and verified end-to-end: fresh install ->
+# Setup Assistant -> desktop -> Remote Login enabled -> SSH login as weave.
+#
+# Canonical fresh-install screen order on this build (NO contamination):
+#   Hello -> Language -> Country -> Transfer -> Written/Spoken Languages ->
+#   Accessibility -> Data & Privacy -> Create a Mac Account -> Apple Account ->
+#   Terms -> Age Range -> Location -> Time Zone -> Analytics -> Screen Time ->
+#   Siri -> FileVault -> Choose Your Look -> Update Mac -> Welcome -> desktop.
+# (Age Range comes AFTER Terms, not before; there is no Age Range pre-account.)
+#
+# Conventions verified on this build:
+#   - Exact-match clicking: "Agree" hits the Agree button, not "Disagree";
+#     "Skip" not "Don't Skip"; "English" not "English (UK)".
+#   - Checkboxes are toggled by clicking their LABEL TEXT (OCR-locatable),
+#     which is resolution-independent — far more robust than a pixel guess at
+#     the small box, and avoids needing full-keyboard-access Tab navigation.
+#   - The Language screen's continue arrow has no OCR-locatable text and its
+#     pixel position varies between boots, so coordinates silently miss;
+#     Enter on the default selection activates it (verified on a fresh
+#     26.5.1 first boot, 2026-06-11).
+#   - Framebuffer is 2048x1536; all <click_at>/coordinate notes assume that.
+#   - NEVER send <esc> on these screens: Setup Assistant treats Escape as
+#     "start VoiceOver". <enter> can grab the menu bar on later screens;
+#     prefer clicks there (the Language screen is the verified exception).
+
+# Fresh installs are slow to first boot (they finalise the install); keep this
+# generous. The long first <wait 'English'> also absorbs variable boot time.
+boot_wait: 60
+
+boot_commands:
+  # "Hello" greeting (cycling languages) -> space advances to Language.
+  # On a fresh install the greeting can appear well after boot_wait, so press
+  # space a few times over ~25s; a stray space on the Language list is harmless.
+  - "<delay 5>"
+  - "<space>"
+  - "<delay 10>"
+  - "<space>"
+  - "<delay 10>"
+  - "<space>"
+
+  # Language: accept the default (English UK — the country is set to UK next
+  # anyway) and press Enter to activate the continue arrow. The arrow glyph's
+  # pixel position varies between boots, so no coordinate click here.
+  - "<wait 'English', timeout=300>"
+  - "<delay 2>"
+  - "<enter>"
+  - "<delay 3>"
+
+  # Select Your Country or Region: choose United Kingdom, Continue.
+  - "<wait 'Country or Region'>"
+  - "<delay 1>"
+  - "<click 'United Kingdom'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 3>"
+
+  # Transfer Your Data to This Mac: "Set up as new", Continue.
+  - "<wait 'Transfer Your Data'>"
+  - "<delay 1>"
+  - "<click 'Set up as new'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 3>"
+
+  # Written and Spoken Languages: accept, Continue.
+  - "<wait 'Written and Spoken Languages'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 3>"
+
+  # Accessibility: Not Now.
+  - "<wait 'Accessibility'>"
+  - "<delay 1>"
+  - "<click 'Not Now'>"
+  - "<delay 3>"
+
+  # Data & Privacy: Continue.
+  - "<wait 'Data & Privacy'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 3>"
+
+  # Create a Mac Account (weave/weave). Click each field by its label and type;
+  # the Account Name auto-fills from Full Name. Then UNCHECK "Allow computer
+  # account password to be reset with your Apple Account" by clicking its label
+  # text (if left checked, Continue forces an Apple sign-in). Account creation
+  # then takes ~10s.
+  - "<wait 'Create a Mac Account'>"
+  - "<delay 2>"
+  - "<click 'Full Name'>"
+  - "<delay 1>"
+  - "<type 'weave'>"
+  - "<delay 1>"
+  - "<click 'Password'>"
+  - "<delay 1>"
+  - "<type 'weave'>"
+  - "<delay 1>"
+  - "<click 'Verify Password'>"
+  - "<delay 1>"
+  - "<type 'weave'>"
+  - "<delay 1>"
+  - "<click 'Allow computer account password to be reset with your Apple'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 12>"
+
+  # Sign In to Your Apple Account: skip via the disclosure. There is no
+  # "Set Up Later" button; the skip path is the "Other Sign-In Options"
+  # disclosure -> "Sign in Later in Settings" -> confirmation popup "Skip"
+  # (exact-match avoids the adjacent "Don't Skip").
+  - "<wait 'Email or Phone Number'>"
+  - "<delay 1>"
+  - "<click 'Other Sign-In Options'>"
+  - "<delay 2>"
+  - "<click 'Sign in Later in Settings'>"
+  - "<delay 2>"
+  - "<click 'Skip'>"
+  - "<delay 3>"
+
+  # Terms and Conditions. Exact-match "Agree" targets the button (not the
+  # "DISAGREE"/"AGREE" words in the licence body, nor the "Disagree" button).
+  # A confirmation popup ("I have read and agree...") then appears with its own
+  # Agree button near screen-centre at (1141,920); click that coordinate (the
+  # main screen's Agree at 1656,1295 would not dismiss the popup).
+  - "<wait 'Terms and Conditions'>"
+  - "<delay 2>"
+  - "<click 'Agree'>"
+  - "<delay 2>"
+  - "<click_at 1141,920>"
+  - "<delay 3>"
+
+  # Age Range (appears AFTER Terms on this build): Adult, Continue.
+  - "<wait 'Age Range'>"
+  - "<delay 1>"
+  - "<click 'Adult'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 3>"
+
+  # Enable Location Services: skip. Continue raises "Are you sure you don't
+  # want to use Location Services?"; click "Don't Use" (exact-match).
+  - "<wait 'Location Services'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 1>"
+  - '<wait "Don''t Use">'
+  - "<delay 1>"
+  - '<click "Don''t Use">'
+  - "<delay 3>"
+
+  # Select Your Time Zone: accept default, Continue.
+  - "<wait 'Time Zone'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 3>"
+
+  # Analytics: Continue.
+  - "<wait 'Analytics'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 3>"
+
+  # Screen Time: Set Up Later.
+  - "<wait 'Screen Time'>"
+  - "<delay 1>"
+  - "<click 'Set Up Later'>"
+  - "<delay 3>"
+
+  # Siri: skip entirely. UNCHECK "Enable Ask Siri" (click its label) BEFORE
+  # Continue, or enabling it adds "Select a Siri Voice" + "Improve Siri"
+  # sub-screens. (Longer timeout: the previous page can be slow.)
+  - "<wait 'Siri', timeout=90>"
+  - "<delay 2>"
+  - "<click 'Enable Ask Siri'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 3>"
+
+  # FileVault: the title is "Your Mac is Ready for FileVault". Not Now raises a
+  # "Mac Data Will Not Be Securely Encrypted" popup with a Continue button near
+  # centre at (1142,897).
+  - "<wait 'FileVault'>"
+  - "<delay 1>"
+  - "<click 'Not Now'>"
+  - "<delay 1>"
+  - "<wait 'Securely Encrypted'>"
+  - "<delay 1>"
+  - "<click_at 1142,897>"
+  - "<delay 3>"
+
+  # Choose Your Look: Continue.
+  - "<wait 'Choose Your Look'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 3>"
+
+  # Update Mac Automatically: Continue.
+  - "<wait 'Update Mac Automatically'>"
+  - "<delay 1>"
+  - "<click 'Continue'>"
+  - "<delay 3>"
+
+  # Welcome -> Get Started lands on the desktop.
+  - "<wait 'welcome'>"
+  - "<delay 1>"
+  - "<click 'Get Started'>"
+  - "<delay 15>"
+
+  # ============================================================
+  # Enable Remote Login (SSH).
+  #
+  # NOTE: on Tahoe `sudo systemsetup -setremotelogin on` from Terminal FAILS
+  # with "requires Full Disk Access privileges", so SSH MUST be enabled through
+  # System Settings, which prompts for the admin password.
+  # ============================================================
+
+  # Give the desktop keyboard focus, then open System Settings via Spotlight.
+  - "<click_at 1024,900>"
+  - "<delay 1>"
+  - "<cmd+space>"
+  - "<delay 2>"
+  - "<type 'System Settings'>"
+  - "<delay 2>"
+  - "<enter>"
+  - "<delay 6>"
+
+  # Search for Remote Login and open it. After typing, WAIT for the results
+  # dropdown to render before clicking, anchored on its "Sharing" group
+  # header — that text exists ONLY in the dropdown. Waiting on (or clicking)
+  # "Remote login" is a trap: the search field itself OCRs as
+  # "Q Remote Login" and SUBSTRING-matches it, so the wait passes before the
+  # dropdown exists and the click lands on the field, dismissing the results
+  # (failed runs 2026-06-11). The dropdown can take >10s on a first login
+  # while Spotlight indexes. With the dropdown present, the exact match
+  # "Remote login" can only hit the result row.
+  - "<wait 'Search'>"
+  - "<delay 1>"
+  - "<click 'Search'>"
+  - "<delay 1>"
+  - "<type 'Remote Login'>"
+  - "<wait 'Sharing'>"
+  - "<delay 1>"
+  - "<click 'Remote login'>"
+  - "<delay 4>"
+
+  # Toggle Remote Login on (the switch sits at ~(1400,411) on this build),
+  # then authenticate in the "Remote Login is trying to modify..." sheet:
+  # the password field is pre-focused, so type the password and Enter.
+  - "<wait 'Remote Login: Off'>"
+  - "<delay 1>"
+  - "<click_at 1400,411>"
+  - "<delay 2>"
+  - "<wait 'Enter your password'>"
+  - "<delay 1>"
+  - "<type 'weave'>"
+  - "<delay 1>"
+  - "<enter>"
+  - "<delay 3>"
+
+  # Confirm it switched on, then close the sheet.
+  - "<wait 'Remote Login: On'>"
+  - "<delay 1>"
+  - "<click 'Done'>"
+  - "<delay 2>"
+  - "<cmd+q>"
+  - "<delay 2>"
+
+# Health check: SSH in as weave/weave to confirm Remote Login is live.
+health_check:
+  type: ssh
+  user: weave
+  password: weave
+  timeout: 30
+  retries: 6
+  retry_delay: 10
+
+# Post-setup commands over SSH (more reliable than typing in Terminal via VNC).
+#
+# IMPORTANT: a fresh admin account requires a password for sudo, and the SSH
+# exec has no TTY, so bare `sudo` fails with "a password is required". Every
+# privileged command therefore pipes the password in: `echo weave | sudo -S`.
+# (Verified live: bare sudo -> "a password is required"; sudo -S -> root.)
+post_ssh_commands:
+  # Enable auto-login for the weave user. sysadminctl sets autoLoginUser but
+  # SACSetAutoLoginPassword returns error:22 on modern macOS (expected, hence
+  # the kcpassword fallback below); tolerate its non-zero exit.
+  - "echo weave | sudo -S sysadminctl -autologin set -userName weave -password weave || true"
+  # Generate /etc/kcpassword (the actual auto-login secret; sysadminctl alone
+  # doesn't always create it). XORs "weave" with Apple's standard kcpassword key.
+  - "perl -e 'my @k=(125,137,82,35,210,188,221,234,163,185,31);my @p=unpack(q{C*},q{weave});my @e;for my $i(0..$#p){$e[$i]=$p[$i]^$k[$i%scalar@k]}my $r=scalar@e%12;push@e,(0)x(12-$r) if $r;open my $f,q{>},q{/tmp/kcp};binmode $f;print $f pack(q{C*},@e);close $f'"
+  - "echo weave | sudo -S cp /tmp/kcp /etc/kcpassword"
+  - "echo weave | sudo -S chmod 600 /etc/kcpassword"
+  - "rm /tmp/kcp"
+  # Disable the screen saver.
+  - "defaults -currentHost write com.apple.screensaver idleTime -int 0"
+  # Don't require a password after sleep / screen saver, with no delay.
+  - "defaults write com.apple.screensaver askForPassword -int 0"
+  - "defaults write com.apple.screensaver askForPasswordDelay -int 0"
+  # Never sleep the display or the system (ephemeral CI/dev box).
+  - "echo weave | sudo -S pmset -a displaysleep 0"
+  - "echo weave | sudo -S pmset -a sleep 0"
+  # Disable auto-logout.
+  - "echo weave | sudo -S defaults write /Library/Preferences/.GlobalPreferences com.apple.autologout.AutoLogOutDelay -int 0"

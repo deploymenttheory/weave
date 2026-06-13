@@ -1,0 +1,24 @@
+{
+  "name": "bridged",
+  "description": "bridged onto a host LAN interface on Linux (peer on the physical network)",
+  "vm": {
+    "os": "linux",
+    "diskSizeGB": 8,
+    "diskFormat": "raw",
+    "cpu": 2,
+    "memoryMB": 2048,
+    "display": { "width": 1024, "height": 768 }
+  },
+  "run": {
+    "headless": false,
+    "vnc": "none"
+  },
+  "network": {
+    "nics": [
+      { "mode": "bridged", "isPrimary": true, "bridgedInterface": "en0" }
+    ]
+  },
+  "expect": {
+    "primaryMode": "bridged"
+  }
+}

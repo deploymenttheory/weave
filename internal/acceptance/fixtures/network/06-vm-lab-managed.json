@@ -1,0 +1,28 @@
+{
+  "name": "vm-lab-managed",
+  "description": "multi-NIC on Linux: isolated vmnet host-mode lab NIC plus a NAT management NIC",
+  "vm": {
+    "os": "linux",
+    "diskSizeGB": 16,
+    "diskFormat": "raw",
+    "cpu": 4,
+    "memoryMB": 4096,
+    "display": { "width": 1280, "height": 800 }
+  },
+  "run": {
+    "headless": true,
+    "vnc": "experimental"
+  },
+  "network": {
+    "nics": [
+      { "mode": "vmnet", "isPrimary": true, "vmnetMode": "host" },
+      { "mode": "nat", "macAddress": "02:00:00:00:ac:01" }
+    ]
+  },
+  "expect": {
+    "primaryMode": "vmnet",
+    "primaryVmnetMode": "host",
+    "nicCount": 2,
+    "distinctMACs": true
+  }
+}

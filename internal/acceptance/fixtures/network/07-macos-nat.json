@@ -1,0 +1,27 @@
+{
+  "name": "macos-nat",
+  "description": "macOS guest on NAT: full-size headed VM with experimental VNC (gated: needs a cached IPSW)",
+  "vm": {
+    "os": "macos",
+    "ipsw": "latest",
+    "macosLabel": "latest supported (resolved from VZMacOSRestoreImage)",
+    "diskSizeGB": 50,
+    "diskFormat": "raw",
+    "cpu": 4,
+    "memoryMB": 8192,
+    "display": { "width": 1920, "height": 1080 }
+  },
+  "run": {
+    "headless": false,
+    "vnc": "experimental"
+  },
+  "network": {
+    "nics": [
+      { "mode": "nat", "isPrimary": true }
+    ]
+  },
+  "expect": {
+    "primaryMode": "nat",
+    "distinctMACs": true
+  }
+}

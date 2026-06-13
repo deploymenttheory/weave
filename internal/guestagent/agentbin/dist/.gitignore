@@ -1,0 +1,4 @@
+# Built guest agent binaries are artifacts produced by guestagent/build.sh.
+# The embed directive needs the directory (and README.md) to exist, but the
+# binaries themselves are not committed.
+weave-guestd-*
